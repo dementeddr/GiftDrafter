@@ -29,6 +29,8 @@ public static class GraphConstruction
         vm.Rng.ShuffleList(participants);
         vm.Rng.ShuffleList(pending);
 
+        foreach (var assignment in pending) assignment.IsValid = true;
+
         slots.AddRange(
             from participant in participants 
             from i in Enumerable.Range(participant.Assignments.Count, categoryCount - participant.Assignments.Count) 
@@ -51,26 +53,26 @@ public static class GraphConstruction
         {
             if (depth >= pending.Count)
                 return true;
+                
+            var participant = slots[depth].Participant;
 
-            for (var i = depth; i < pending.Count; i++)
+            foreach (var (assignment, i) in pending.Where(p => p.IsValid).Select((p, i) => (p, i)))
             {
-                (pending[depth], pending[i]) = (pending[i], pending[depth]);
-                var participant = slots[depth].Participant;
-                var assignment = pending[i];
-
                 var canAssign = participant.CanBeAssigned(assignment);
                 Console.WriteLine("{0}-{1} {2}: {3} {4} -> {5}: {6}", depth, i, canAssign, participant.Person.Name, slots[depth].Slot, assignment.Receiver.Name, assignment.Category.Desc);
 
                 if (canAssign)
                 {
+                    assignment.IsValid = false;
                     participant.Assignments.Add(assignment);
+
                     if (AssignTo(depth + 1))
                         return true;
 
                     participant.Assignments.RemoveAt(slots[depth].Slot);
                 }
 
-                (pending[i], pending[depth]) = (pending[depth], pending[i]);
+                assignment.IsValid = true;
             }
 
             return false;

@@ -48,31 +48,11 @@ public class MainWindowViewModel : ObservableObject
             _draftingParticipant = value;
             _draftingParticipant?.IsDrafting = true;
             RaisePropertyChanged();
-            UpdateValidity();
+            UpdateAssignmentValidity();
         }
     }
 
     public Assignment SelectedAssignment { get; set; }
-
-    // public Person SelectedPerson
-    // {
-    //     get => _selectedPerson;
-    //     set
-    //     {
-    //         _selectedPerson = value;
-    //         UpdateCategoryValidity();
-    //     }
-    // }
-    //
-    // public Category SelectedCategory
-    // {
-    //     get => _selectedCategory;
-    //     set
-    //     {
-    //         _selectedCategory = value;
-    //         UpdatePersonValidity();
-    //     }
-    // }
 
     public Random Rng { get; set; }
     public string Seed { get; set => SetProperty(ref field, value); } = "0";
@@ -111,12 +91,6 @@ public class MainWindowViewModel : ObservableObject
 
     private void DraftPair()
     {
-        // if (!SelectedPerson.IsValid || !SelectedCategory.IsValid)
-        //     return;
-        //
-        // DraftingParticipant.Assignments.Add(assignment);
-        // MadeAssignments.Add(assignment);
-
         if (DraftingParticipant is null || !(SelectedAssignment?.IsValid ?? false))
             return;
 
@@ -137,7 +111,7 @@ public class MainWindowViewModel : ObservableObject
     {
         var openFileDialog = new OpenFileDialog
             {
-            FileName = "Select a gifting file",
+            FileName = "input.txt",
             Filter = "Text files (*.txt)|*.txt|All Files (*)|*",
             Title = "Open gifting file",
         };
@@ -178,8 +152,6 @@ public class MainWindowViewModel : ObservableObject
         MadeAssignments.Clear();
         DraftOrder.Clear();
         _draftingParticipant = null;
-        //_selectedPerson = null;
-        //_selectedCategory = null;
 
         string line;
         var file = new StreamReader(new BufferedStream(str));
@@ -237,8 +209,6 @@ public class MainWindowViewModel : ObservableObject
 
     private void WriteOutputFile(Stream str, DateTime now)
     {
-        // var json = JsonConvert.SerializeObject(Participants.ToArray(),Formatting.Indented);
-
         var writer = new StreamWriter(str);
 
         writer.WriteLine($"GiftDrafter Output {now}");
@@ -291,7 +261,7 @@ public class MainWindowViewModel : ObservableObject
         }
 
         DraftingParticipant = DraftOrder.FirstOrDefault();
-        UpdateValidity();
+        UpdateAssignmentValidity();
     }
 
     private void GenerateRemainingGraph()
@@ -304,41 +274,9 @@ public class MainWindowViewModel : ObservableObject
         }
     }
 
-    #region UpdateValidity
-
-    private void UpdateValidity()
-    {
-        UpdateAssignmentValidity();
-        // UpdatePersonValidity();
-        // UpdateCategoryValidity();
-    }
-
     private void UpdateAssignmentValidity()
     {
         foreach (var assignment in PendingAssignments)
             assignment.IsValid = DraftingParticipant.CanBeAssigned(assignment);
     }
-
-    // private void UpdatePersonValidity()
-    // {
-    //     foreach (var person in People)
-    //     {
-    //         if (person == DraftingParticipant.Person)
-    //             person.IsValid = false;
-    //         else if (MadeAssignments.Any(a => a.Category == SelectedCategory && a.Receiver == person))
-    //             person.IsValid = false;
-    //         else
-    //             person.IsValid = true;
-    //     }
-    // }
-    //
-    // private void UpdateCategoryValidity()
-    // {
-    //     foreach (var category in Categories)
-    //     {
-    //         category.IsValid = !MadeAssignments.Any(a => a.Receiver == SelectedPerson && a.Category == category);
-    //     }
-    // }
-
-    #endregion
 }
