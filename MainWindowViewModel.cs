@@ -12,6 +12,8 @@ namespace GiftDrafter;
 
 public class MainWindowViewModel : ObservableObject
 {
+    private Random _secretRng = new();
+
     public MainWindowViewModel()
     {
         OpenInputFileCommand = new RelayCommand(LoadInputFile);
@@ -73,7 +75,7 @@ public class MainWindowViewModel : ObservableObject
 
     private void GenerateSeed()
     {
-        Seed = new Random().Next().ToString();
+        Seed = _secretRng.Next().ToString();
         SetSeed();
     }
 
