@@ -11,14 +11,13 @@ namespace GiftDrafter;
 
 public class MainWindowViewModel : ObservableObject
 {
-    //private Person _selectedPerson;
-    //private Category _selectedCategory;
     private Participant _draftingParticipant;
 
     public MainWindowViewModel()
     {
         OpenInputFileCommand = new RelayCommand(LoadInputFile);
         DraftPairCommand = new RelayCommand(DraftPair);
+        ChooseAtRandomCommand = new RelayCommand(ChooseAtRandom);
         GenerateSeedCommand = new RelayCommand(GenerateSeed);
         SetSeedCommand = new RelayCommand(SetSeed);
         SaveAssignmentsCommand = new RelayCommand(SaveAssignments);
@@ -52,7 +51,7 @@ public class MainWindowViewModel : ObservableObject
         }
     }
 
-    public Assignment SelectedAssignment { get; set; }
+    public Assignment SelectedAssignment { get; set => SetProperty(ref field, value); }
 
     public Random Rng { get; set; }
     public string Seed { get; set => SetProperty(ref field, value); } = "0";
@@ -69,6 +68,7 @@ public class MainWindowViewModel : ObservableObject
 
     public ICommand OpenInputFileCommand { get; }
     public ICommand DraftPairCommand { get; }
+    public ICommand ChooseAtRandomCommand { get; }
     public ICommand GenerateSeedCommand { get; }
     public ICommand SetSeedCommand { get; }
     public ICommand GenerateRemainingCommand { get; }
@@ -76,7 +76,7 @@ public class MainWindowViewModel : ObservableObject
 
     private void GenerateSeed()
     {
-        Seed = Rng.Next(int.MaxValue).ToString();
+        Seed = new Random().Next().ToString();
         SetSeed();
     }
 
@@ -103,6 +103,12 @@ public class MainWindowViewModel : ObservableObject
 
         DraftOrder.Remove(DraftingParticipant);
         DraftingParticipant = DraftOrder.FirstOrDefault();
+    }
+
+    private void ChooseAtRandom()
+    {
+        var validChoices = PendingAssignments.Where(a => a.IsValid).ToArray();
+        SelectedAssignment = validChoices[Rng.Next(validChoices.Length)];
     }
 
     #region FileAccess

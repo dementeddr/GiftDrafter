@@ -8,13 +8,15 @@
         Title="MainWindow" Height="700" Width="700">
     <Window.Resources>
 
+    <!-- Styles -->
+
         <Style x:Key="GlobalFontSize" TargetType="{x:Type TextBlock}">
             <Setter Property="FontSize" Value="15"/>
         </Style>
 
         <Style x:Key="ValidityStyle" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource GlobalFontSize}">
             <Setter Property="TextElement.Foreground" Value="Black"/>
-            <Setter Property="TextElement.Background" Value="#AAEEFFEE"/>
+            <Setter Property="TextElement.Background" Value="#99DDFFDD"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsValid}" Value="False">
                     <Setter Property="Foreground" Value="DimGray"/>
@@ -33,6 +35,47 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="SeparatorStyle" TargetType="Separator">
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+
+        <Style x:Key="ButtonText" TargetType="TextBlock">
+            <Setter Property="Margin" Value="5, 0"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="AlwaysFocusedStyle" TargetType="ListViewItem">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter 
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                HorizontalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#CCEEFF" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#BBD8FF" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#70C0FF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Templates -->
 
         <DataTemplate x:Key="PersonTemplate" DataType="{x:Type local:Person}">
             <TextBlock Text="{Binding Name}"
@@ -68,7 +111,6 @@
         <DataTemplate x:Key="ParticipantPreDraftTemplate" DataType="{x:Type local:Participant}">
             <TextBlock Text="{Binding Person.Name}" Style="{StaticResource GlobalFontSize}"
                        />
-                       <!-- Style="{StaticResource DraftingStyle}" -->
         </DataTemplate>
 
         <DataTemplate x:Key="ParticipantPostDraftTemplate" DataType="{x:Type local:Participant}">
@@ -97,41 +139,58 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!-- Buttons -->
+        <!-- Left Side Buttons -->
 
         <DockPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
-                   Height="25">
-            <Button HorizontalAlignment="Left" Margin="10,2"
+                   Height="22" Margin="10,5,10,0">
+
+            <Button HorizontalAlignment="Left"
                     Command="{Binding OpenInputFileCommand}">
-                <TextBlock Text="Choose File" VerticalAlignment="Center"/>
+                <TextBlock Text="Choose File" Style="{StaticResource ButtonText}"/>
             </Button>
 
-            <Button HorizontalAlignment="Left" Margin="10, 2"
+            <Separator Style="{StaticResource SeparatorStyle}"/>
+
+            <Button HorizontalAlignment="Left"
                     Command="{Binding GenerateSeedCommand}">
                 <TextBlock Text="Generate Seed" IsEnabled="{Binding DraftNotStarted}"
-                           VerticalAlignment="Center"/>
+                           Style="{StaticResource ButtonText}"/>
             </Button>
+            
+            <Separator Style="{StaticResource SeparatorStyle}"/>
 
-            <TextBlock Text="Seed:" Margin="5,2" VerticalAlignment="Center"/>
+            <TextBlock Text="Seed:" Margin="0,0,5,0" VerticalAlignment="Center"/>
             <TextBox Text="{Binding Seed, Mode=TwoWay}"
-                     Width="100" Margin="0,2"
+                     Width="90" VerticalContentAlignment="Center"
                      IsEnabled="{Binding DraftNotStarted}">
                 <TextBox.InputBindings>
                     <KeyBinding Key="Enter" Command="{Binding SetSeedCommand}"/>
                 </TextBox.InputBindings>
             </TextBox>
+            
+            <Separator Style="{StaticResource SeparatorStyle}"/>
 
-            <TextBlock Text="Draft Rounds:" Margin="10,0,0,0" VerticalAlignment="Center"/>
-            <ComboBox Margin="5,2" Width="50"
+            <TextBlock Text="Draft Rounds:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <ComboBox Width="50"
                       ItemsSource="{Binding DraftRoundOptions}"
                       SelectedValue="{Binding DraftRounds}"
                       IsEnabled="{Binding DraftNotStarted}"/>
 
+            <!-- Right Side Buttons -->
+
             <Button DockPanel.Dock="Right"
-                    HorizontalAlignment="Right" Margin="10,2"
+                    HorizontalAlignment="Right"
                     Command="{Binding DraftPairCommand}"
                     IsEnabled="{Binding SelectedAssignment.IsValid}">
-                <TextBlock Text="Draft This Combo" VerticalAlignment="Center"/>
+                <TextBlock Text="Draft This Combo"  Style="{StaticResource ButtonText}"/>
+            </Button>
+            
+            <Separator DockPanel.Dock="Right" Style="{StaticResource SeparatorStyle}"/>
+
+            <Button DockPanel.Dock="Right"
+                    HorizontalAlignment="Right"
+                    Command="{Binding ChooseAtRandomCommand}">
+                <TextBlock Text="Pick Random" Style="{StaticResource ButtonText}"/>
             </Button>
 
         </DockPanel>
@@ -145,8 +204,9 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ListView ItemsSource="{Binding DraftOrder}"
                           ItemTemplate="{StaticResource ParticipantPreDraftTemplate}"
-                          SelectedItem="{Binding DraftingParticipant, Mode=TwoWay}"
+                          SelectedItem="{Binding DraftingParticipant}"
                           SelectionMode="Single"
+                          ItemContainerStyle="{StaticResource AlwaysFocusedStyle}"
                           >
                 </ListView>
             </ScrollViewer>
@@ -169,11 +229,11 @@
             </GroupBox.Header>
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ListView ItemsSource="{Binding PendingAssignments}"
-                          SelectedItem="{Binding SelectedAssignment, Mode=TwoWay}"
+                          SelectedItem="{Binding SelectedAssignment}"
                           ItemTemplate="{StaticResource DraftableAssignmentTemplate}"
                           >
                     <ListView.ItemContainerStyle>
-                        <Style TargetType="ListViewItem">
+                        <Style TargetType="ListViewItem" BasedOn="{StaticResource AlwaysFocusedStyle}">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         </Style>
                     </ListView.ItemContainerStyle>
@@ -181,35 +241,16 @@
             </ScrollViewer>
         </GroupBox>
 
-        <!-- <GroupBox Grid.Row="1" Grid.Column="1" Margin="10" > -->
-        <!--     <GroupBox.Header> -->
-        <!--         <TextBlock>People</TextBlock> -->
-        <!--     </GroupBox.Header> -->
-        <!--     <ListBox ItemsSource="{Binding People}" -->
-        <!--              ItemTemplate="{StaticResource PersonTemplate}" -->
-        <!--              SelectionMode="Single" -->
-        <!--              SelectedItem="{Binding SelectedPerson, Mode=TwoWay}" -->
-        <!--              /> -->
-        <!-- </GroupBox> -->
-        <!-- -->
-        <!-- <GroupBox Grid.Row="2" Grid.Column="1" Margin="10" > -->
-        <!--     <GroupBox.Header> -->
-        <!--         <TextBlock>Categories</TextBlock> -->
-        <!--     </GroupBox.Header> -->
-        <!--     <ListBox ItemsSource="{Binding Categories}" -->
-        <!--              ItemTemplate="{StaticResource CategoryTemplate}" -->
-        <!--              SelectionMode="Single" -->
-        <!--              SelectedItem="{Binding SelectedCategory, Mode=TwoWay}"/> -->
-        <!-- </GroupBox> -->
+        <!-- Footer -->
 
         <Button Grid.Row="3" Grid.Column="0" Margin="10,0,10,10"
                 Command="{Binding GenerateRemainingCommand}">
-            <TextBlock Text="Generate Remaining Assignments"/>
+            <TextBlock Text="Generate Remaining Assignments" Style="{StaticResource ButtonText}"/>
         </Button>
 
         <Button Grid.Row="3" Grid.Column="1" Margin="10, 0,10,10"
                 Command="{Binding SaveAssignmentsCommand}">
-            <TextBlock Text="Save Assignments"/>
+            <TextBlock Text="Save Assignments" Style="{StaticResource ButtonText}"/>
         </Button>
     </Grid>
 </Window>
