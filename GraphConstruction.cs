@@ -37,14 +37,16 @@ public static class GraphConstruction
             select new AssignmentSlot(participant, i)
             );
 
-        Console.WriteLine("Participants:");
-        foreach (var participant in participants) Console.WriteLine(participant);
-        
-        Console.WriteLine("\nSlots:");
-        foreach (var assignmentSlot in slots) Console.WriteLine("{0}: {1}", assignmentSlot.Participant.Person.Name, assignmentSlot.Slot);
-       
-        Console.WriteLine("\nPending Assignments:");
-        foreach (var assignment in pending) Console.WriteLine(assignment.Display);
+        // Console.WriteLine("Participants:");
+        // foreach (var participant in participants) Console.WriteLine(participant);
+        //
+        // Console.WriteLine("\nSlots:");
+        // foreach (var assignmentSlot in slots) Console.WriteLine("{0}: {1}", assignmentSlot.Participant.Person.Name, assignmentSlot.Slot);
+        //
+        // Console.WriteLine("\nPending Assignments:");
+        // foreach (var assignment in pending) Console.WriteLine(assignment.Display);
+        //
+        // Console.WriteLine("\nBEGIN:\n");
 
         return AssignTo(0);
         
@@ -59,7 +61,7 @@ public static class GraphConstruction
             foreach (var (assignment, i) in pending.Where(p => p.IsValid).Select((p, i) => (p, i)))
             {
                 var canAssign = participant.CanBeAssigned(assignment);
-                Console.WriteLine("{0}-{1} {2}: {3} {4} -> {5}: {6}", depth, i, canAssign, participant.Person.Name, slots[depth].Slot, assignment.Receiver.Name, assignment.Category.Desc);
+                // Console.WriteLine("{0}-{1} {2}: {3} {4} -> {5}: {6}", depth, i, canAssign, participant.Person.Name, slots[depth].Slot, assignment.Receiver.Name, assignment.Category.Desc);
 
                 if (canAssign)
                 {
@@ -85,6 +87,4 @@ public class AssignmentSlot(Participant participant, int slot)
     public Participant Participant { get; } = participant;
 
     public int Slot { get; } = slot;
-
-    public Assignment Assignment { get; set; }
 }

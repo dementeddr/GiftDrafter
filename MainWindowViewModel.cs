@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Security;
@@ -11,8 +12,6 @@ namespace GiftDrafter;
 
 public class MainWindowViewModel : ObservableObject
 {
-    private Participant _draftingParticipant;
-
     public MainWindowViewModel()
     {
         OpenInputFileCommand = new RelayCommand(LoadInputFile);
@@ -30,23 +29,21 @@ public class MainWindowViewModel : ObservableObject
     public ObservableCollection<Participant> Participants { get; } = [];
     public ObservableCollection<Person> People { get; } = [];
     public ObservableCollection<Category> Categories { get; } = [];
-    public ObservableCollection<Participant> DraftOrder { get; } = [];
+    public ObservableCollection<DraftRound> DraftOrder { get; } = [];
     public ObservableCollection<Assignment> PendingAssignments { get; } = [];
     public ObservableCollection<Assignment> MadeAssignments { get; } = [];
     public ObservableCollection<int> DraftRoundOptions { get; } = [1];
 
     public Participant DraftingParticipant
     {
-        get => _draftingParticipant;
+        get => DraftOrder.FirstOrDefault()?.CurrentParticipant;
         set
         {
-            if (_draftingParticipant == value)
+            var drafting = DraftOrder.FirstOrDefault();
+            if (drafting is null || drafting.CurrentParticipant == value)
                 return;
 
-            _draftingParticipant?.IsDrafting = false;
-            _draftingParticipant = value;
-            _draftingParticipant?.IsDrafting = true;
-            RaisePropertyChanged();
+            drafting.CurrentParticipant = value;
             UpdateAssignmentValidity();
         }
     }
@@ -91,7 +88,9 @@ public class MainWindowViewModel : ObservableObject
 
     private void DraftPair()
     {
-        if (DraftingParticipant is null || !(SelectedAssignment?.IsValid ?? false))
+        var draftRound = DraftOrder.FirstOrDefault();
+
+        if (DraftingParticipant is null || !(SelectedAssignment?.IsValid ?? false) || draftRound is null)
             return;
 
         DraftNotStarted = false;
@@ -101,8 +100,17 @@ public class MainWindowViewModel : ObservableObject
         MadeAssignments.Add(assignment);
         DraftingParticipant.Assignments.Add(assignment);
 
-        DraftOrder.Remove(DraftingParticipant);
-        DraftingParticipant = DraftOrder.FirstOrDefault();
+        draftRound.Participants.Remove(DraftingParticipant);
+        if (!draftRound.Participants.Any())
+        {
+            draftRound.PropertyChanged -= OnCurrentDrafterChanged;
+            DraftOrder.RemoveAt(0);
+            draftRound = DraftOrder.FirstOrDefault();
+            draftRound?.IsActive = true;
+            draftRound?.PropertyChanged += OnCurrentDrafterChanged;
+        }
+
+        DraftingParticipant = draftRound?.Participants.FirstOrDefault();
     }
 
     private void ChooseAtRandom()
@@ -157,7 +165,7 @@ public class MainWindowViewModel : ObservableObject
         Categories.Clear();
         MadeAssignments.Clear();
         DraftOrder.Clear();
-        _draftingParticipant = null;
+        DraftingParticipant = null;
 
         string line;
         var file = new StreamReader(new BufferedStream(str));
@@ -238,6 +246,7 @@ public class MainWindowViewModel : ObservableObject
     private void GeneratePendingAssignments()
     {
         PendingAssignments.Clear();
+        DraftingParticipant = null;
 
         foreach (var person in People)
         {
@@ -250,28 +259,38 @@ public class MainWindowViewModel : ObservableObject
 
     private void GenerateDraftOrder()
     {
+        var firstRound = DraftOrder.FirstOrDefault();
+        firstRound?.PropertyChanged -= OnCurrentDrafterChanged;
+
         DraftOrder.Clear();
         if (Participants.Count == 0) return;
 
-        var temp = Participants.ToList();
+        var pList = Participants.ToList();
+        var pListReverse = Participants.Reverse().ToList();
 
         if (Seed != "0")
-            Rng.ShuffleList(temp);
+            Rng.ShuffleList(pList);
 
         for (var i = 0; i < DraftRounds; i++)
         {
-            foreach (var participant in temp)
-                DraftOrder.Add(participant);
-
-            temp.Reverse();
+            var toAdd = i % 2 == 0 ? pList : pListReverse;
+            DraftOrder.Add(new DraftRound(toAdd, i+1));
         }
 
-        DraftingParticipant = DraftOrder.FirstOrDefault();
+        firstRound = DraftOrder.FirstOrDefault();
+        if (firstRound is not null)
+        {
+            firstRound.PropertyChanged += OnCurrentDrafterChanged;
+            firstRound.IsActive = true;
+            DraftingParticipant = firstRound.Participants.FirstOrDefault();
+        }
+
         UpdateAssignmentValidity();
     }
 
     private void GenerateRemainingGraph()
     {
+        DraftOrder.Clear();
         var result = this.ConstructRemainingGraph();
 
         if (!result)
@@ -280,9 +299,15 @@ public class MainWindowViewModel : ObservableObject
         }
     }
 
+    private void OnCurrentDrafterChanged(object sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(DraftRound.CurrentParticipant))
+            UpdateAssignmentValidity();
+    }
+
     private void UpdateAssignmentValidity()
     {
         foreach (var assignment in PendingAssignments)
-            assignment.IsValid = DraftingParticipant.CanBeAssigned(assignment);
+            assignment.IsValid = DraftingParticipant?.CanBeAssigned(assignment) ?? false;
     }
 }

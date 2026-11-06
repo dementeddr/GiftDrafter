@@ -14,6 +14,10 @@
             <Setter Property="FontSize" Value="15"/>
         </Style>
 
+        <Style x:Key="HeaderFont" BasedOn="{StaticResource GlobalFontSize}" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
         <Style x:Key="ValidityStyle" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource GlobalFontSize}">
             <Setter Property="TextElement.Foreground" Value="Black"/>
             <Setter Property="TextElement.Background" Value="#99DDFFDD"/>
@@ -100,17 +104,32 @@
                            />
             </Border>
         </DataTemplate>
-        
+
         <DataTemplate x:Key="DraftedAssignmentTemplate" DataType="{x:Type local:Assignment}">
-                <TextBlock Text="{Binding Display}"
-                           Style="{StaticResource GlobalFontSize}"
-                           HorizontalAlignment="Stretch"
-                           />
+            <TextBlock Text="{Binding Display}"
+                       Style="{StaticResource GlobalFontSize}"
+                       HorizontalAlignment="Stretch"/>
         </DataTemplate>
 
         <DataTemplate x:Key="ParticipantPreDraftTemplate" DataType="{x:Type local:Participant}">
             <TextBlock Text="{Binding Person.Name}" Style="{StaticResource GlobalFontSize}"
                        />
+        </DataTemplate>
+        
+        <DataTemplate x:Key="DraftRoundTemplate" DataType="{x:Type local:DraftRound}">
+            <GroupBox>
+                <GroupBox.Header>
+                    <TextBlock FontWeight="Bold">
+                        <Run Text="Round: "/><Run Text="{Binding RoundNumber, Mode=OneWay}"/>
+                    </TextBlock>
+                </GroupBox.Header>
+                <ListView ItemsSource="{Binding Participants}"
+                          ItemTemplate="{StaticResource ParticipantPreDraftTemplate}"
+                          SelectedItem="{Binding CurrentParticipant}"
+                          SelectionMode="Single"
+                          ItemContainerStyle="{StaticResource AlwaysFocusedStyle}"
+                          IsEnabled="{Binding IsActive}"/>
+            </GroupBox>
         </DataTemplate>
 
         <DataTemplate x:Key="ParticipantPostDraftTemplate" DataType="{x:Type local:Participant}">
@@ -199,22 +218,18 @@
 
         <GroupBox Grid.Row="1" Grid.Column="0" Margin="5" >
             <GroupBox.Header>
-                <TextBlock Text="Draft Order" Style="{StaticResource GlobalFontSize}"/>
+                <TextBlock Text="Draft Order" Style="{StaticResource HeaderFont}"/>
             </GroupBox.Header>
             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ListView ItemsSource="{Binding DraftOrder}"
-                          ItemTemplate="{StaticResource ParticipantPreDraftTemplate}"
-                          SelectedItem="{Binding DraftingParticipant}"
-                          SelectionMode="Single"
-                          ItemContainerStyle="{StaticResource AlwaysFocusedStyle}"
-                          >
-                </ListView>
+                <ItemsControl ItemsSource="{Binding DraftOrder}"
+                          ItemTemplate="{StaticResource DraftRoundTemplate}">
+                </ItemsControl>
             </ScrollViewer>
         </GroupBox>
 
         <GroupBox Grid.Row="2" Grid.Column="0" Margin="5">
             <GroupBox.Header>
-                <TextBlock Text="Assignments" Style="{StaticResource GlobalFontSize}"/>
+                <TextBlock Text="Assignments" Style="{StaticResource HeaderFont}"/>
             </GroupBox.Header>
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding Participants}"
@@ -225,7 +240,7 @@
 
         <GroupBox Grid.Column="1" Grid.Row="1" Grid.RowSpan="2" Margin="5">
             <GroupBox.Header>
-                <TextBlock Text="Available Assignments" Style="{StaticResource GlobalFontSize}"/>
+                <TextBlock Text="Available Assignments" Style="{StaticResource HeaderFont}"/>
             </GroupBox.Header>
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ListView ItemsSource="{Binding PendingAssignments}"
