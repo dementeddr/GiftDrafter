@@ -1,26 +1,78 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 
 namespace GiftDrafter;
 
-public enum Strictness
+public abstract class Strictness
 {
-    Narcissist,
-    Low,
-    Medium,
-    High,
+    public abstract string DisplayName { get; }
+    public abstract bool CanDraft(Participant drafter, Assignment assignment, DraftRound draftRound);
 }
 
-public static class StrictnessExtensions
+public class MinimumStrictness : Strictness
 {
-    public static bool CanBeAssigned(this Participant participant, Assignment assignment)
+    public override string DisplayName => "Minimum";
+
+    public override bool CanDraft(Participant drafter, Assignment assignment, DraftRound draftRound)
     {
-        if (participant is null)
+        if (drafter is null)
             return false;
-        if (assignment.Receiver == participant.Person) 
+        return assignment.Receiver != drafter.Person;
+    }
+}
+
+public class LowStrictness : Strictness
+{
+    public override string DisplayName => "Low";
+
+    public override bool CanDraft(Participant drafter, Assignment assignment, DraftRound draftRound)
+    {
+        if (drafter is null)
             return false;
-        if (participant.Assignments.Any(a => a.Receiver == assignment.Receiver || a.Category == assignment.Category))
+        if (assignment.Receiver == drafter.Person) 
+            return false;
+        return drafter.Assignments.All(a => a.Receiver != assignment.Receiver);
+    }
+}
+
+public class MediumStrictness : Strictness
+{
+    public override string DisplayName => "Medium";
+
+    public override bool CanDraft(Participant drafter, Assignment assignment, DraftRound draftRound)
+    {
+        if (drafter is null)
+            return false;
+        if (assignment.Receiver == drafter.Person) 
+            return false;
+        return !drafter.Assignments.Any(a => a.Receiver == assignment.Receiver || a.Category == assignment.Category);
+    }
+}
+
+public class HighStrictness : Strictness
+{
+    public override string DisplayName => "High";
+
+    public override bool CanDraft(Participant drafter, Assignment assignment, DraftRound draftRound)
+    {
+        if (drafter is null || draftRound is null)
+            return false;
+        if (assignment.Receiver == drafter.Person) 
+            return false;
+        if (drafter.Assignments.Any(a => a.Receiver == assignment.Receiver || a.Category == assignment.Category))
             return false;
 
-        return true;
+        if (draftRound.Participants.Count == 2)
+        {
+            var givers = draftRound.MadeAssignments.Select(p => p.Giver).ToHashSet();
+            var receivers = draftRound.MadeAssignments.Select(ma => ma.Receiver).ToHashSet();
+            givers.Add(drafter.Person);
+            receivers.Add(assignment.Receiver);
+
+            if (receivers.SetEquals(givers))
+                return false;
+        }
+
+        return !draftRound.MadeAssignments.Select(par => par.Receiver).Contains(assignment.Receiver);
     }
 }

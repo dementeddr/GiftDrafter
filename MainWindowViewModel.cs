@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Security;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 
@@ -12,17 +13,21 @@ namespace GiftDrafter;
 
 public class MainWindowViewModel : ObservableObject
 {
-    private Random _secretRng = new();
+    private readonly Random _secretRng = new();
 
     public MainWindowViewModel()
     {
         OpenInputFileCommand = new RelayCommand(LoadInputFile);
-        DraftPairCommand = new RelayCommand(DraftPair);
-        ChooseAtRandomCommand = new RelayCommand(ChooseAtRandom);
         GenerateSeedCommand = new RelayCommand(GenerateSeed);
         SetSeedCommand = new RelayCommand(SetSeed);
+        StartDraftCommand = new RelayCommand(StartDraft);
+        DraftPairCommand = new RelayCommand(DraftPair);
+        ChooseAtRandomCommand = new RelayCommand(ChooseAtRandom);
         SaveAssignmentsCommand = new RelayCommand(SaveAssignments);
         GenerateRemainingCommand = new RelayCommand(GenerateRemainingGraph);
+
+        SelectedStrictness = new MediumStrictness();
+        StrictnessOptions = [new MinimumStrictness(), new LowStrictness(), SelectedStrictness, new HighStrictness()];
 
         SetSeed();
     }
@@ -35,6 +40,17 @@ public class MainWindowViewModel : ObservableObject
     public ObservableCollection<Assignment> PendingAssignments { get; } = [];
     public ObservableCollection<Assignment> MadeAssignments { get; } = [];
     public ObservableCollection<int> DraftRoundOptions { get; } = [1];
+    public ObservableCollection<Strictness> StrictnessOptions { get; }
+    
+    public ICommand OpenInputFileCommand { get; }
+    public ICommand GenerateSeedCommand { get; }
+    public ICommand SetSeedCommand { get; }
+    public ICommand StartDraftCommand { get; }
+    public ICommand DraftPairCommand { get; }
+    public ICommand ChooseAtRandomCommand { get; }
+    public ICommand GenerateRemainingCommand { get; }
+    public ICommand SaveAssignmentsCommand { get; }
+
 
     public Participant DraftingParticipant
     {
@@ -42,7 +58,7 @@ public class MainWindowViewModel : ObservableObject
         set
         {
             var drafting = DraftOrder.FirstOrDefault();
-            if (drafting is null || drafting.CurrentParticipant == value)
+            if (drafting is null)
                 return;
 
             drafting.CurrentParticipant = value;
@@ -51,10 +67,23 @@ public class MainWindowViewModel : ObservableObject
     }
 
     public Assignment SelectedAssignment { get; set => SetProperty(ref field, value); }
+    public Strictness SelectedStrictness { get; set => SetProperty(ref field, value); }
 
     public Random Rng { get; set; }
     public string Seed { get; set => SetProperty(ref field, value); } = "0";
-    public bool DraftNotStarted { get; private set => SetProperty(ref field, value); } = true;
+
+    public bool DraftStarted
+    {
+        get;
+        private set
+        {
+            if (SetProperty(ref field, value))
+                RaisePropertyChanged(nameof(DraftNotStarted));
+        }
+    }
+
+    public bool DraftNotStarted => !DraftStarted;
+
     public int DraftRounds
     {
         get;
@@ -64,14 +93,6 @@ public class MainWindowViewModel : ObservableObject
             GenerateDraftOrder();
         }
     } = 1;
-
-    public ICommand OpenInputFileCommand { get; }
-    public ICommand DraftPairCommand { get; }
-    public ICommand ChooseAtRandomCommand { get; }
-    public ICommand GenerateSeedCommand { get; }
-    public ICommand SetSeedCommand { get; }
-    public ICommand GenerateRemainingCommand { get; }
-    public ICommand SaveAssignmentsCommand { get; }
 
     private void GenerateSeed()
     {
@@ -88,6 +109,11 @@ public class MainWindowViewModel : ObservableObject
         GenerateDraftOrder();
     }
 
+    private void StartDraft()
+    {
+        DraftStarted = true;
+    }
+
     private void DraftPair()
     {
         var draftRound = DraftOrder.FirstOrDefault();
@@ -95,14 +121,14 @@ public class MainWindowViewModel : ObservableObject
         if (DraftingParticipant is null || !(SelectedAssignment?.IsValid ?? false) || draftRound is null)
             return;
 
-        DraftNotStarted = false;
-
         var assignment = SelectedAssignment;
         PendingAssignments.Remove(assignment);
         MadeAssignments.Add(assignment);
+        assignment.Giver = DraftingParticipant.Person;
         DraftingParticipant.Assignments.Add(assignment);
-
+        draftRound.MadeAssignments.Add(assignment);
         draftRound.Participants.Remove(DraftingParticipant);
+
         if (!draftRound.Participants.Any())
         {
             draftRound.PropertyChanged -= OnCurrentDrafterChanged;
@@ -118,6 +144,7 @@ public class MainWindowViewModel : ObservableObject
     private void ChooseAtRandom()
     {
         var validChoices = PendingAssignments.Where(a => a.IsValid).ToArray();
+        if (validChoices.Length == 0) return;
         SelectedAssignment = validChoices[Rng.Next(validChoices.Length)];
     }
 
@@ -125,8 +152,15 @@ public class MainWindowViewModel : ObservableObject
 
     private void LoadInputFile()
     {
+        if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+        {
+            Reset();
+            Initialize();
+            return;
+        }
+
         var openFileDialog = new OpenFileDialog
-            {
+        {
             FileName = "input.txt",
             Filter = "Text files (*.txt)|*.txt|All Files (*)|*",
             Title = "Open gifting file",
@@ -148,26 +182,16 @@ public class MainWindowViewModel : ObservableObject
                             $"Details:\n\n{ex.StackTrace}");
         }
 
-        GeneratePendingAssignments();
-        SetSeed();
-        
-        DraftRoundOptions.Clear();
-        DraftRounds = 0;
-        foreach (var i in Enumerable.Range(1, Categories.Count))
-            DraftRoundOptions.Add(i);
-
-        DraftRounds = 1;
-        DraftNotStarted = true;
+        Initialize();
     }
 
     private void ReadInputFile(Stream str)
     {
+        Reset();
+        
         People.Clear();
         Participants.Clear();
         Categories.Clear();
-        MadeAssignments.Clear();
-        DraftOrder.Clear();
-        DraftingParticipant = null;
 
         string line;
         var file = new StreamReader(new BufferedStream(str));
@@ -205,15 +229,21 @@ public class MainWindowViewModel : ObservableObject
             Filter = "Text Files (*.txt)|*.txt|All files (*)|*",
             Title = "Export Assignments",
         };
+        
+        var output = ConstructOutput(now);
+
+        MessageBox.Show(output, "Output");
 
         if (!saveFileDialog.ShowDialog() ?? true)
             return;
-
+        
         try
         {
             using (var str = saveFileDialog.OpenFile())
             {
-                WriteOutputFile(str, now);
+                var writer = new StreamWriter(str);
+                writer.Write(output);
+                writer.Flush();
             }
         }
         catch (SecurityException ex)
@@ -223,27 +253,55 @@ public class MainWindowViewModel : ObservableObject
         }
     }
 
-    private void WriteOutputFile(Stream str, DateTime now)
+    private string ConstructOutput(DateTime now)
     {
-        var writer = new StreamWriter(str);
+        var sb = new StringBuilder();
 
-        writer.WriteLine($"GiftDrafter Output {now}");
-        writer.WriteLine($"Seed: \"{Seed}\", Draft Rounds: {DraftRounds}\n");
-        writer.WriteLine("Assignments:");
+        sb.AppendLine($"GiftDrafter Output {now}");
+        sb.AppendLine($"Seed: \"{Seed}\", Draft Rounds: {DraftRounds}, Strictness: {SelectedStrictness.DisplayName}\n");
+        sb.AppendLine("Assignments:");
 
         foreach (var participant in Participants)
         {
-            writer.WriteLine("\n" + participant.Person.Name);
+            sb.AppendLine("\n" + participant.Person.Name);
             foreach (var assignment in participant.Assignments)
             {
-                writer.WriteLine(assignment.Display);
+                sb.AppendLine(assignment.Display);
             }
         }
 
-        writer.Flush();
+        return sb.ToString();
     }
 
     #endregion
+
+    private void Initialize()
+    {
+        GeneratePendingAssignments();
+        SetSeed();
+        
+        DraftRoundOptions.Clear();
+        DraftRounds = 0;
+        foreach (var i in Enumerable.Range(1, Categories.Count))
+            DraftRoundOptions.Add(i);
+
+        DraftRounds = 1;
+        DraftStarted = false;
+    }
+
+    private void Reset()
+    {
+        foreach (var participant in Participants)
+            participant.Assignments.Clear();
+
+        foreach (var assignment in PendingAssignments.Concat(MadeAssignments))
+            assignment.Giver = null;
+
+        PendingAssignments.Clear();
+        MadeAssignments.Clear();
+        DraftOrder.Clear();
+        DraftingParticipant = null;
+    }
 
     private void GeneratePendingAssignments()
     {
@@ -292,12 +350,16 @@ public class MainWindowViewModel : ObservableObject
 
     private void GenerateRemainingGraph()
     {
-        DraftOrder.Clear();
         var result = this.ConstructRemainingGraph();
 
         if (!result)
         {
             MessageBox.Show("Failed to construct gift assignment graph. Could not find valid permutation", "Error");
+        }
+        else
+        {
+            DraftOrder.Clear();
+            DraftStarted = true;
         }
     }
 
@@ -310,6 +372,6 @@ public class MainWindowViewModel : ObservableObject
     private void UpdateAssignmentValidity()
     {
         foreach (var assignment in PendingAssignments)
-            assignment.IsValid = DraftingParticipant?.CanBeAssigned(assignment) ?? false;
+            assignment.IsValid = SelectedStrictness.CanDraft(DraftingParticipant, assignment, DraftOrder.FirstOrDefault());
     }
 }

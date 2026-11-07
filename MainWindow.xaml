@@ -5,10 +5,19 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GiftDrafter"
         mc:Ignorable="d"
-        Title="MainWindow" Height="700" Width="700">
+        Title="MainWindow" Height="800" Width="700">
     <Window.Resources>
 
-    <!-- Styles -->
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        
+        <CollectionViewSource x:Key="PendingAssignGroup" Source="{Binding PendingAssignments}">
+            <CollectionViewSource.GroupDescriptions>
+                <PropertyGroupDescription PropertyName="Receiver"></PropertyGroupDescription>
+            </CollectionViewSource.GroupDescriptions>
+        </CollectionViewSource>
+
+
+        <!-- Styles -->
 
         <Style x:Key="GlobalFontSize" TargetType="{x:Type TextBlock}">
             <Setter Property="FontSize" Value="15"/>
@@ -41,7 +50,7 @@
         </Style>
 
         <Style x:Key="SeparatorStyle" TargetType="Separator">
-            <Setter Property="Width" Value="10"/>
+            <Setter Property="Width" Value="12"/>
             <Setter Property="Background" Value="Transparent"/>
         </Style>
 
@@ -148,7 +157,15 @@
             </StackPanel>
         </DataTemplate>
 
+        <DataTemplate x:Key="StrictnessTemplate" DataType="{x:Type local:Strictness}">
+            <TextBlock Text="{Binding DisplayName}"/>
+        </DataTemplate>
+
     </Window.Resources>
+
+
+    <!-- MAIN GRID -->
+
 
     <Grid d:DataContext="{d:DesignInstance Type=local:MainWindowViewModel, IsDesignTimeCreatable=True}">
             <Grid.RowDefinitions>
@@ -163,63 +180,89 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!-- Left Side Buttons -->
-
-        <DockPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+        <DockPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" 
+                   HorizontalAlignment="Stretch"
                    Height="22" Margin="10,5,10,0">
 
-            <Button HorizontalAlignment="Left"
-                    Command="{Binding OpenInputFileCommand}">
+            <Button Command="{Binding OpenInputFileCommand}">
                 <TextBlock Text="Choose File" Style="{StaticResource ButtonText}"/>
             </Button>
 
-            <Separator Style="{StaticResource SeparatorStyle}"/>
+            <Grid>
 
-            <Button HorizontalAlignment="Left"
-                    Command="{Binding GenerateSeedCommand}">
-                <TextBlock Text="Generate Seed" IsEnabled="{Binding DraftNotStarted}"
-                           Style="{StaticResource ButtonText}"/>
-            </Button>
-            
-            <Separator Style="{StaticResource SeparatorStyle}"/>
+                <!-- Draft Not Started Buttons -->
 
-            <TextBlock Text="Seed:" Margin="0,0,5,0" VerticalAlignment="Center"/>
-            <TextBox Text="{Binding Seed, Mode=TwoWay}"
-                     Width="90" VerticalContentAlignment="Center"
-                     IsEnabled="{Binding DraftNotStarted}">
-                <TextBox.InputBindings>
-                    <KeyBinding Key="Enter" Command="{Binding SetSeedCommand}"/>
-                </TextBox.InputBindings>
-            </TextBox>
-            
-            <Separator Style="{StaticResource SeparatorStyle}"/>
+                <DockPanel Visibility="{Binding DraftNotStarted, Converter={StaticResource BoolToVis}}"
+                           HorizontalAlignment="Stretch" LastChildFill="False">
 
-            <TextBlock Text="Draft Rounds:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-            <ComboBox Width="50"
-                      ItemsSource="{Binding DraftRoundOptions}"
-                      SelectedValue="{Binding DraftRounds}"
-                      IsEnabled="{Binding DraftNotStarted}"/>
+                    <Separator Style="{StaticResource SeparatorStyle}"/>
 
-            <!-- Right Side Buttons -->
+                    <Button Command="{Binding GenerateSeedCommand}">
+                        <TextBlock Text="Generate Seed" 
+                                   Style="{StaticResource ButtonText}"/>
+                    </Button>
 
-            <Button DockPanel.Dock="Right"
-                    HorizontalAlignment="Right"
-                    Command="{Binding DraftPairCommand}"
-                    IsEnabled="{Binding SelectedAssignment.IsValid}">
-                <TextBlock Text="Draft This Combo"  Style="{StaticResource ButtonText}"/>
-            </Button>
-            
-            <Separator DockPanel.Dock="Right" Style="{StaticResource SeparatorStyle}"/>
+                    <Separator Style="{StaticResource SeparatorStyle}"/>
 
-            <Button DockPanel.Dock="Right"
-                    HorizontalAlignment="Right"
-                    Command="{Binding ChooseAtRandomCommand}">
-                <TextBlock Text="Pick Random" Style="{StaticResource ButtonText}"/>
-            </Button>
+                    <TextBlock Text="Seed:" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding Seed, Mode=TwoWay}"
+                             Width="80" VerticalContentAlignment="Center">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding SetSeedCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
 
+                    <Separator Style="{StaticResource SeparatorStyle}"/>
+
+                    <TextBlock Text="Draft Rounds:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <ComboBox Width="40"
+                              ItemsSource="{Binding DraftRoundOptions}"
+                              SelectedValue="{Binding DraftRounds}"/>
+
+                    <Separator Style="{StaticResource SeparatorStyle}"/>
+
+                    <TextBlock Text="Strictness:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <ComboBox 
+                              ItemsSource="{Binding StrictnessOptions}"
+                              SelectedValue="{Binding SelectedStrictness}"
+                              ItemTemplate="{StaticResource StrictnessTemplate}"/>
+
+                    <Button DockPanel.Dock="Right"
+                            Command="{Binding StartDraftCommand}">
+                        <TextBlock Text="Start Draft" Style="{StaticResource ButtonText}"/>
+                    </Button>
+
+                </DockPanel>
+
+                <!-- Draft Started Buttons -->
+
+                <DockPanel Visibility="{Binding DraftStarted, Converter={StaticResource BoolToVis}}"
+                       HorizontalAlignment="Stretch" LastChildFill="False">
+
+                    <Button DockPanel.Dock="Right"
+                        HorizontalAlignment="Right"
+                        Command="{Binding DraftPairCommand}"
+                        Visibility="{Binding DraftStarted, Converter={StaticResource BoolToVis}}"
+                        IsEnabled="{Binding SelectedAssignment.IsValid}">
+                        <TextBlock Text="Draft This Combo"  Style="{StaticResource ButtonText}"/>
+                    </Button>
+
+                    <Separator DockPanel.Dock="Right" Style="{StaticResource SeparatorStyle}"/>
+
+                    <Button DockPanel.Dock="Right"
+                        HorizontalAlignment="Right"
+                        Visibility="{Binding DraftStarted, Converter={StaticResource BoolToVis}}"
+                        Command="{Binding ChooseAtRandomCommand}">
+                        <TextBlock Text="Pick Random" Style="{StaticResource ButtonText}"/>
+                    </Button>
+
+                </DockPanel>
+            </Grid>
         </DockPanel>
 
+
         <!-- Lists -->
+
 
         <GroupBox Grid.Row="1" Grid.Column="0" Margin="5" >
             <GroupBox.Header>
@@ -253,7 +296,7 @@
                 <TextBlock Text="Available Assignments" Style="{StaticResource HeaderFont}"/>
             </GroupBox.Header>
             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ListView ItemsSource="{Binding PendingAssignments}"
+                <ListView ItemsSource="{Binding Source={StaticResource PendingAssignGroup}}"
                           SelectedItem="{Binding SelectedAssignment}"
                           ItemTemplate="{StaticResource DraftableAssignmentTemplate}">
                     <ListView.ItemContainerStyle>
@@ -265,7 +308,8 @@
                         <GroupStyle>
                             <GroupStyle.HeaderTemplate>
                                 <DataTemplate DataType="GroupItem">
-                                    <TextBlock Text="{Binding Name}"></TextBlock>
+                                    <Separator Background="Transparent"></Separator>
+                                    <!-- <TextBlock Text="{Binding Name}"/> -->
                                 </DataTemplate>
                             </GroupStyle.HeaderTemplate>
                         </GroupStyle>

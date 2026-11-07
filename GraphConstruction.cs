@@ -60,7 +60,7 @@ public static class GraphConstruction
 
             foreach (var (assignment, i) in pending.Where(p => p.IsValid).Select((p, i) => (p, i)))
             {
-                var canAssign = participant.CanBeAssigned(assignment);
+                var canAssign = vm.SelectedStrictness.CanDraft(participant, assignment, vm.DraftOrder.FirstOrDefault());
                 // Console.WriteLine("{0}-{1} {2}: {3} {4} -> {5}: {6}", depth, i, canAssign, participant.Person.Name, slots[depth].Slot, assignment.Receiver.Name, assignment.Category.Desc);
 
                 if (canAssign)

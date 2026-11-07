@@ -7,8 +7,6 @@ namespace GiftDrafter;
 
 public class Participant(Person person) : ObservableObject
 {
-    public bool IsDrafting { get; set => SetProperty(ref field, value); } = false;
-
     public Person Person { get; } = person;
 
     public ObservableCollection<Assignment> Assignments { get; } = [];
@@ -66,7 +64,6 @@ public class Assignment : ObservableObject
     }
 
     public Person Giver { get; set => SetProperty(ref field, value); }
-
     public Person Receiver { get; }
     public Category Category { get; }
 
@@ -84,8 +81,10 @@ public class Assignment : ObservableObject
 public class DraftRound(IEnumerable<Participant> participants, int roundNumber) : ObservableObject
 {
     public ObservableCollection<Participant> Participants { get; } = new(participants);
+    public ObservableCollection<Assignment> MadeAssignments { get; } = [];
 
     public int RoundNumber { get; } = roundNumber;
+    public Participant CurrentParticipant { get; set => SetProperty(ref field, value); }
 
     public bool IsActive
     {
@@ -97,5 +96,4 @@ public class DraftRound(IEnumerable<Participant> participants, int roundNumber) 
         }
     }
 
-    public Participant CurrentParticipant { get; set => SetProperty(ref field, value); }
 }
