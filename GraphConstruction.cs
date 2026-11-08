@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Windows.Documents;
+
 // ReSharper disable LocalizableElement
 
 namespace GiftDrafter;
@@ -82,7 +80,7 @@ public static class GraphConstruction
     }
 }
 
-public class AssignmentSlot(Participant participant, int slot)
+internal class AssignmentSlot(Participant participant, int slot)
 {
     public Participant Participant { get; } = participant;
 
