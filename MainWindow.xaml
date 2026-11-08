@@ -121,12 +121,17 @@
             <TextBlock Text="{Binding Display}"
                        Style="{StaticResource GlobalFontSize}"
                        HorizontalAlignment="Stretch">
+                <TextBlock.InputBindings>
+                    <MouseBinding
+                        MouseAction="LeftDoubleClick"
+                        Command="{Binding DataContext.UnDraftAssignmentCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}"/>
+                </TextBlock.InputBindings>
             </TextBlock>
         </DataTemplate>
 
         <DataTemplate x:Key="ParticipantPreDraftTemplate" DataType="{x:Type local:Participant}">
-            <TextBlock Text="{Binding Person.Name}" Style="{StaticResource GlobalFontSize}"
-                       />
+            <TextBlock Text="{Binding Person.Name}" Style="{StaticResource GlobalFontSize}"/>
         </DataTemplate>
         
         <DataTemplate x:Key="DraftRoundTemplate" DataType="{x:Type local:DraftRound}">
@@ -151,8 +156,8 @@
                     <GroupBox.Header>
                         <TextBlock Text="{Binding Person.Name}" Style="{StaticResource GlobalFontSize}"/>
                     </GroupBox.Header>
-                    <ListBox ItemsSource="{Binding Assignments}"
-                             ItemTemplate="{StaticResource DraftedAssignmentTemplate}"/>
+                    <ListView ItemsSource="{Binding Assignments}"
+                              ItemTemplate="{StaticResource DraftedAssignmentTemplate}"/>
                 </GroupBox>
             </StackPanel>
         </DataTemplate>
