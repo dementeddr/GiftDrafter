@@ -433,6 +433,9 @@ public class MainWindowViewModel : ObservableObject
     private void UpdateAssignmentValidity()
     {
         foreach (var assignment in PendingAssignments)
+        {
             assignment.IsValid = SelectedStrictness.CanDraft(DraftingParticipant, assignment, DraftOrder.FirstOrDefault());
+
+        }
     }
 }

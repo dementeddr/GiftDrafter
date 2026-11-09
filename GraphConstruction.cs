@@ -23,6 +23,7 @@ public static class GraphConstruction
         var pending = vm.PendingAssignments.ToList();
         var slots = new List<AssignmentSlot>(pending.Count);
         var categoryCount = vm.Categories.Count;
+        var currentRound = vm.DraftOrder.FirstOrDefault();
 
         vm.Rng.ShuffleList(participants);
         vm.Rng.ShuffleList(pending);
@@ -58,7 +59,7 @@ public static class GraphConstruction
 
             foreach (var (assignment, i) in pending.Where(p => p.IsValid).Select((p, i) => (p, i)))
             {
-                var canAssign = vm.SelectedStrictness.CanDraft(participant, assignment, vm.DraftOrder.FirstOrDefault());
+                var canAssign = vm.SelectedStrictness.CanDraft(participant, assignment, currentRound);
                 // Console.WriteLine("{0}-{1} {2}: {3} {4} -> {5}: {6}", depth, i, canAssign, participant.Person.Name, slots[depth].Slot, assignment.Receiver.Name, assignment.Category.Desc);
 
                 if (canAssign)
